@@ -13,7 +13,7 @@ def sent_email(subject, recipients, body):
 		mail.send(msg)
 		return make_response(jsonify({"msg": "email sent successfully!"}), 200)  
 	except Exception as e:
-		return make_response(jsonify({"msg": e.args}), 201)
+		return make_response(jsonify({"msg": e.args}), 400)
 			
         
 

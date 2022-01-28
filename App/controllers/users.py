@@ -15,21 +15,24 @@ def sign_up_controller(doc):
         user = User.objects(email = doc.get('email', None)).first()
         if user:
             return make_response(jsonify({'msg':'user already exists'}), 400) 
-        if not (doc and doc.get('email', None) and doc.get('password', None)):
+        if not (doc and doc.get('email', None)):
             return make_response(jsonify({'msg':'email and password are required'}), 400)  
-        token = jwt.encode({'email': doc.get('email'), 'password': doc.get('password'), 'id':'', 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes = 20)}, _secret_key, 'HS256')
+        # token = jwt.encode({'email': doc.get('email'), 'password': doc.get('password'), 'id':'', 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes = 20)}, _secret_key, 'HS256')
+        token = jwt.encode({'email': doc.get('email'), 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes = 30)}, _secret_key, 'HS256')
         subject = 'Registration Token'
         return sent_email(subject, [doc.get('email')], token), 200
     except Exception as e:
         return make_response(jsonify({'msg': e.args }), 400)
 
 @token_required
-def registration_controller(data, args):
+def registration_controller(data, doc):
     try:
         user = User.objects(email = data.get('email', None)).first()
         if user:
             return make_response(jsonify({'msg':'user already exists'}), 400) 
-        user = User(email = data.get('email'), password = generate_password_hash(data.get('password')), created_at = datetime.datetime.now(), updated_at = datetime.datetime.now())
+        if not (doc and doc.get('password', None)):
+            return make_response(jsonify({'msg':'password is required'}), 400) 
+        user = User(email = data.get('email'), password = generate_password_hash(doc.get('password', None)), created_at = datetime.datetime.now(), updated_at = datetime.datetime.now())
         user.save()    
         return make_response(jsonify({"msg": "user created successfully"}), 201)   
     except Exception as e:
@@ -73,11 +76,13 @@ def user_login_controller(doc):
         user = User.objects(email = doc.get('email', None)).first()
         if not (user and doc.get('password', None)):
             return make_response(jsonify({"msg": f"user not exists or incorrect password", "required fields": ['email', 'password'] }), 404) 
- 
-        if not check_password_hash(user.password[2:-1], doc['password']):
+        if user.password[0] != '$':
+            password = user.password.split("'")[1]
+        else:
+            password = user.password
+        if not check_password_hash(password, doc['password']):
             return make_response(jsonify({"msg": "password is incorrect"}))
-        token = jwt.encode({'email': user.email, 'password': '', 'id': str(user.id), 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)}, _secret_key, 'HS256')
-        # token = jwt.encode({'email': user.email, 'id': str(user.id), 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)}, _secret_key, 'HS256')
+        token = jwt.encode({'email': user.email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)}, _secret_key, 'HS256')
         return make_response(jsonify({"msg": f"LoggedIn successfully", "token": token}), 200)
     except Exception as e:
         return make_response(jsonify({'msg':f'{e.args} or invalid data'}), 400)
@@ -89,7 +94,7 @@ def forget_password_controller(doc):
         user = User.objects(email = email).first()
         if not user:
             return make_response(jsonify({'msg':f'user not found, with email {email}' } ), 404)
-        token = jwt.encode({'email': user.email, 'password': '', 'id':'', 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes = 20)}, _secret_key, 'HS256')
+        token = jwt.encode({'email': user.email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes = 20)}, _secret_key, 'HS256')
         subject = 'Forget Password Token'
         return sent_email(subject, [email], token)
     except Exception as e:
