@@ -1,2 +1,2 @@
-# flask_mongo
-apis for users and todos, by using flask and monogo
+# flask and flask-mongoengine
+apis for users and todos, by using flask and flask-mongoengine
